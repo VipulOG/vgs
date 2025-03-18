@@ -15,25 +15,44 @@
     nixpkgs,
     ...
   } @ inputs: let
-    systems = ["x86_64-linux"];
-    eachSystem = f:
-      nixpkgs.lib.genAttrs systems (
-        s: f nixpkgs.legacyPackages.${s} inputs.ags.packages.${s}
-      );
+    system = "x86_64-linux";
+    pkgs = nixpkgs.legacyPackages.${system};
+    agsPkgs = inputs.ags.packages.${system};
   in {
-    devShells = eachSystem (
-      pkgs: agsPkgs: {
-        default = pkgs.mkShell {
-          buildInputs = with pkgs; [
-            agsPkgs.agsFull
-            nodejs_20
-            pre-commit
-            treefmt
-            nodePackages.prettier
-            alejandra
-          ];
-        };
-      }
-    );
+    devShells.${system} = {
+      default = pkgs.mkShell {
+        packages = with pkgs;
+        with agsPkgs; [
+          agsFull
+          nodejs_20
+          typescript-language-server
+          nil
+          pre-commit
+          treefmt
+          nodePackages.prettier
+          alejandra
+        ];
+      };
+    };
+
+    packages.${system}.default = inputs.ags.lib.bundle {
+      inherit pkgs;
+
+      src = ./.;
+      name = "vgs";
+      entry = "app.ts";
+      gtk4 = false;
+
+      # additional libraries and executables to add to gjs' runtime
+      extraPackages = with pkgs;
+      with agsPkgs; [
+        wireplumber
+        battery
+        network
+        notifd
+      ];
+    };
+
+    formatter.${system} = pkgs.treefmt;
   };
 }
