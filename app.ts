@@ -1,10 +1,23 @@
-import {App} from 'astal/gtk3';
+import {App, Gdk, Gtk} from 'astal/gtk3';
 import style from './style.scss';
 import TopBar from './widget/TopBar';
 
-App.start({
-    css: style,
-    main() {
-        App.get_monitors().map(TopBar);
-    },
-});
+
+function main() {
+    const bars = new Map<Gdk.Monitor, Gtk.Widget>()
+
+    for (const gdkmonitor of App.get_monitors()) {
+        bars.set(gdkmonitor, TopBar(gdkmonitor))
+    }
+
+    App.connect("monitor-added", (_, gdkmonitor) => {
+        bars.set(gdkmonitor, TopBar(gdkmonitor))
+    })
+
+    App.connect("monitor-removed", (_, gdkmonitor) => {
+        bars.get(gdkmonitor)?.destroy()
+        bars.delete(gdkmonitor)
+    })
+}
+
+App.start({css: style, main })
